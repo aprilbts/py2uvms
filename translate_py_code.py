@@ -1,3 +1,4 @@
+
 # coding: utf-8
 import random
 import string
@@ -65,6 +66,8 @@ userdefined_metheds = []
 userdefined_methedsNames = []
 uvm_modules = {"uvm_json":"json","uvm_math":"math","uvm_safemath":"safemath","uvm_string":"string","uvm_table":"table"}
 builtin_g_funcs = {"str":"tostring","int":"tointeger","float":"tonumber","bool":"toboolean"}
+
+wrapped_g_funcs = ["call_contract_api","static_call_contract_api"]
 
 def translate_LOAD_GLOBAL(proto, ins):
     newcommentPrefix = ";L" + str(ins.source_line) + ";" + ins.opname
@@ -172,7 +175,7 @@ def translate_LOAD_GLOBAL(proto, ins):
                                     ("gettabup %" + str(targetSlotIdx) + " @" + str(
                                         envIndex) + " const " + "\"" + constValue + "\"" + newcommentPrefix))
             result.append(uvmIns)
-    elif (constValue in userdefined_methedsNames):
+    elif (constValue in userdefined_methedsNames) or (constValue in wrapped_g_funcs):
         idx = proto.InternUpvalue(constValue)
         uvmIns = UvmInstruction(UvmOpCodeEnum.OP_GETUPVAL, ins,
                                 ("getupval %" + str(targetSlotIdx) + " @" + str(idx) + newcommentPrefix))
@@ -1084,6 +1087,40 @@ def translateClassType(r, parentProto, name):
     proto.AddInstructionLine(UvmOpCodeEnum.OP_RETURN, "return %" + str(tableSlot) + " 2", None)
     return proto
 
+def generate_wrapped_proto(name,parentProto):
+    funcproto = UvmProto()
+    funcproto.Parent = parentProto
+
+    funcproto.PycoConstsNum = len(funcproto.ConstantValues)
+
+    locvar = UvmLocVar("contract_address", 0)
+    funcproto.Locvars.append(locvar)
+    locvar = UvmLocVar("api_name", 1)
+    funcproto.Locvars.append(locvar)
+    locvar = UvmLocVar("args", 2)
+    funcproto.Locvars.append(locvar)
+
+    funcproto.Numparams = 3
+    funcproto.LineDefined = -1
+    funcproto.LastLineDefined = -1
+
+    funcproto.Name = name
+    funcproto.isOfflineFunc = False
+
+    if (name == "call_contract_api"):
+        uvmIns = UvmInstruction(UvmOpCodeEnum.OP_CCALL, None,("ccall %0 2 2" ))
+        funcproto.CodeInstructions.append(uvmIns)
+    elif (name == "static_call_contract_api"):
+        uvmIns = UvmInstruction(UvmOpCodeEnum.OP_CSTATICCALL, None, ("cstaticcall %0 2 2"))
+        funcproto.CodeInstructions.append(uvmIns)
+    else:
+        print("not support wrap func:"+name)
+        exit(1)
+    uvmIns = UvmInstruction(UvmOpCodeEnum.OP_RETURN, None, ("return %0 2"))
+    funcproto.CodeInstructions.append(uvmIns)
+    funcproto.MaxStackSize = 3
+    return funcproto
+
 
 def translateMethod(coinfo,parentProto,funco):
     funcproto = UvmProto()
@@ -1419,6 +1456,9 @@ def main(argv):
                 if (((funcinfo.co_filename + "c") != filepath) and (funcinfo.co_filename != filepath)):
                     print("don't translate method: " + funcinfo.co_name + " from " + funcinfo.co_filename)
                     continue
+                if(name in wrapped_g_funcs):
+                    print("can't define method name :"+name)
+                    exit(1)
                 userdefined_methedsNames.append(name)
                 userdefined_metheds.append(x)
 
@@ -1432,6 +1472,16 @@ def main(argv):
 
         for x in userdefined_metheds:
             utilProto = translateToolMethodType(x, topProto)
+            topProto.InternConstantValue(utilProto.Name);
+            slotIndex = topProto.Numparams + len(topProto.SubProtos)
+            topProto.AddInstructionLine(UvmOpCodeEnum.OP_CLOSURE, "closure %" + str(slotIndex) + " " + utilProto.Name,
+                                        None);
+            subProtoName = utilProto.Name;
+            topProto.Locvars.append(UvmLocVar(subProtoName, slotIndex))
+            topProto.SubProtos.append(utilProto)
+
+        for func_name in wrapped_g_funcs:
+            utilProto = generate_wrapped_proto(func_name,topProto)
             topProto.InternConstantValue(utilProto.Name);
             slotIndex = topProto.Numparams + len(topProto.SubProtos)
             topProto.AddInstructionLine(UvmOpCodeEnum.OP_CLOSURE, "closure %" + str(slotIndex) + " " + utilProto.Name,

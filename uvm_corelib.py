@@ -245,6 +245,9 @@ def send_message(conaddr,api_name,arg):
 def error(msg):
     print("error:",msg)
 
+def delegate_call(conaddr,api_name,arg):
+    return None
+
 
 
 

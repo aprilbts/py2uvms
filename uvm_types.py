@@ -219,7 +219,7 @@ base_conss = [True,False,None]
 uvm_globals = ["print", "pprint", "table", "string", "time", "math", "safemath", "json", "type", "require", "Array", "Stream",\
                 "import_contract_from_address", "import_contract", "emit", "is_valid_address", "is_valid_contract_address",\
 				"get_prev_call_frame_contract_address", "get_prev_call_frame_api_name", "get_contract_call_frame_stack_size",\
-                "uvm", "storage", "exit", "self", "debugger", "exit_debugger",\
+                "uvm", "storage", "exit", "self", "debugger", "exit_debugger","delegate_call",\
                 "caller", "caller_address",\
                 "contract_transfer", "contract_transfer_to", "transfer_from_contract_to_address",\
 				"transfer_from_contract_to_public_account",\
@@ -232,6 +232,5 @@ uvm_globals = ["print", "pprint", "table", "string", "time", "math", "safemath",
                 "setmetatable",\
 				"hex_to_bytes", "bytes_to_hex", "sha256_hex", "sha1_hex", "sha3_hex", "ripemd160_hex",\
 				"cbor_encode", "cbor_decode", "signature_recover","get_address_role","send_message",\
-               "createMap","createArray","setMap","getMap","setArray","appendArray","getArrayCount","getLenOf","insertArray","sortArray","removeArray",\
-               "call_contract_api","static_call_contract_api"]
+               "createMap","createArray","setMap","getMap","setArray","appendArray","getArrayCount","getLenOf","insertArray","sortArray","removeArray"]
 
